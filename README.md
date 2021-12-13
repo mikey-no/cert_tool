@@ -91,7 +91,7 @@ pytest .\app\CertTools.py --capture=no
 python .\app\CertTool.py
 ```
 
-Then open in a web browser: https://localhost:<port>
+Then open in a web browser: ```https://localhost:<port>```
 
 
 
