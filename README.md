@@ -1,19 +1,20 @@
 # CertTools
-
-Using python [cryptography module](https://pypi.org/project/cryptography/) to create x509 certificates in turn for:
+Using python [cryptography module](https://pypi.org/project/cryptography/) to create x509 certificates for:
 - self signed TLS Server
 - CA signed TLS Server
 - CA signed TLS Server and client Mutual TLS Certificate
 
-Then using [pytest](https://docs.pytest.org/) test the above certificates are all working with a server and client. 
-- Server with [FastAPI](https://fastapi.tiangolo.com/) and [Uvicorn](https://www.uvicorn.org/).
-- Client with [requests](https://docs.python-requests.org/en/latest/) making use of the certificates.
+Server is created with [FastAPI](https://fastapi.tiangolo.com/) and [Uvicorn](https://www.uvicorn.org/).
+Client with [requests](https://docs.python-requests.org/en/latest/) making use of the certificates.
 
-The FastAPI Uvicorn server is run in another process 
-[multiprocessing](https://docs.python.org/3/library/multiprocessing.html) than the client.
+The servers and client are run with [pytest](https://docs.pytest.org/), testing the above certificates are all working. 
+
+The FastAPI Uvicorn server is run in another process than the clients using [multiprocessing](https://docs.python.org/3/library/multiprocessing.html).
 
 > You could then use these certificates and keys within a TLS terminating proxy in front of your application without 
 > wondering if the certificates are even working or not. :relieved:
+
+> You would have to trust the certificates authority!! For use in a lab context then that should be fine.
 
 ## Overview of how it works
 
@@ -80,10 +81,12 @@ pip install -r requirements.txt
 # Test
 
 ```commandline
-pytest .\app\CertTools.py --capture=no
+cd cert_tool
+python -m pytest --capture=no
 ```
 
 **pytest --capture=no**  - option shows the standard output as the tests run
+**python -m**            - calling via python will also add the current directory to sys.path (see: (pytest usage)[https://www.pytest.org/en/7.1.x/how-to/usage.html#usage]) 
 
 # Run
 
@@ -91,7 +94,47 @@ pytest .\app\CertTools.py --capture=no
 python .\app\CertTool.py
 ```
 
-Then open in a web browser: https://localhost:<port>
+Then open in a web browser: 
 
+- http:      ```https://localhost:5000```
+- tls:       ```https://localhost:5001```
+- mtls:      ```https://localhost:5002```
 
+CertTool would need to be commented differently to run each of the above configurations. The 'recipes' are included 
+in the script (CertTool.py). 
 
+# Run from the CA
+
+Initialise the Certificate Authority
+
+```commandline
+python .\app\main_root.py --prefix dev --create_root
+```
+
+# Run from the Leaf Server 
+
+Initialise the Leaf private, public then create a certificate signing request
+
+```commandline
+python .\app\main_leaf.py --prefix dev
+```
+
+# Run from the CA (again)
+
+Sign the certificate signing request creating a leaf certificate 
+
+```commandline
+python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem
+```
+- NB 1: the hostname of the leaf server will be automatically used in the certificate file name
+- NB 2: to prefix must be the same for each of these three commands
+
+The command to run mTLS not implemented in a stand-alone application like has been done with the leaf and root scripts.
+The functionality is within CertTool.py, just not exposed.
+
+# Other
+
+1) The private key may be encrypted (but has not been fully tested)
+2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/), when I 
+started this project I also wrote a sockets based solution without FastAPI (but I have not included this in this 
+project).
