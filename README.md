@@ -1,19 +1,20 @@
 # CertTools
 
-Using python [cryptography module](https://pypi.org/project/cryptography/) to create x509 certificates in turn for:
+Using python [cryptography module](https://pypi.org/project/cryptography/) to create x509 certificates for:
 - self signed TLS Server
 - CA signed TLS Server
 - CA signed TLS Server and client Mutual TLS Certificate
 
-Then using [pytest](https://docs.pytest.org/) test the above certificates are all working with a server and client. 
-- Server with [FastAPI](https://fastapi.tiangolo.com/) and [Uvicorn](https://www.uvicorn.org/).
-- Client with [requests](https://docs.python-requests.org/en/latest/) making use of the certificates.
+Server is created with [FastAPI](https://fastapi.tiangolo.com/) and [Uvicorn](https://www.uvicorn.org/).
+Client with [requests](https://docs.python-requests.org/en/latest/) making use of the certificates.
 
-The FastAPI Uvicorn server is run in another process 
-[multiprocessing](https://docs.python.org/3/library/multiprocessing.html) than the client.
+The servers and client are run with [pytest](https://docs.pytest.org/), testing the above certificates are all working. 
+
+The FastAPI Uvicorn server is run in another process than the clients using [multiprocessing](https://docs.python.org/3/library/multiprocessing.html).
 
 > You could then use these certificates and keys within a TLS terminating proxy in front of your application without 
 > wondering if the certificates are even working or not. :relieved:
+> You would have to trust the certificates authority and for the use in a lab context then that should be fine.
 
 ## Overview of how it works
 
@@ -21,7 +22,7 @@ The FastAPI Uvicorn server is run in another process
 ```python
 from multiprocessing import Process
 ```
-- for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
+  - for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
   - the private key relates to the certificate and as 'only you' have the private key then the cert must be yours
 ```python
 
