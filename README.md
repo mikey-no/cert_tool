@@ -85,8 +85,8 @@ cd cert_tool
 python -m pytest --capture=no
 ```
 
-**pytest --capture=no**  - option shows the standard output as the tests run
-**python -m**            - calling via python will also add the current directory to sys.path (see: (pytest usage)[https://www.pytest.org/en/7.1.x/how-to/usage.html#usage]) 
+- **pytest --capture=no**  - option shows the standard output as the tests run
+- **python -m**            - calling via python will also add the current directory to sys.path (see: [pytest usage](https://www.pytest.org/en/7.1.x/how-to/usage.html#usage)) 
 
 # Run
 
