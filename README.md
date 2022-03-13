@@ -81,7 +81,7 @@ pip install -r requirements.txt
 # Test
 
 ```commandline
-pytest .\app\CertTools.py --capture=no
+pytest .\app\CertTool.py --capture=no
 ```
 
 **pytest --capture=no**  - option shows the standard output as the tests run
