@@ -1,5 +1,4 @@
 # CertTools
-
 Using python [cryptography module](https://pypi.org/project/cryptography/) to create x509 certificates for:
 - self signed TLS Server
 - CA signed TLS Server
@@ -14,6 +13,7 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 
 > You could then use these certificates and keys within a TLS terminating proxy in front of your application without 
 > wondering if the certificates are even working or not. :relieved:
+
 > You would have to trust the certificates authority and for the use in a lab context then that should be fine.
 
 ## Overview of how it works
@@ -22,7 +22,7 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 ```python
 from multiprocessing import Process
 ```
-  - for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
+- for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
   - the private key relates to the certificate and as 'only you' have the private key then the cert must be yours
 ```python
 
@@ -92,7 +92,38 @@ pytest .\app\CertTools.py --capture=no
 python .\app\CertTool.py
 ```
 
-Then open in a web browser: ```https://localhost:<port>```
+Then open in a web browser: 
 
+- http:      ```https://localhost:5000```
+- tls:       ```https://localhost:5001```
+- mtls:      ```https://localhost:5002```
 
+# Run from the CA
 
+Initialise the Certificate Authority
+
+```commandline
+python .\app\main_root.py --prefix dev --create_root
+```
+
+# Run from the Leaf Server 
+
+Initialise the Leaf private, public then create a certificate signing request
+
+```commandline
+python .\app\main_leaf.py --prefix dev
+```
+
+# Run from the CA (again)
+
+Sign the certificate signing request creating a leaf certificate 
+
+```commandline
+python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem
+```
+- NB 1: the hostname of the leaf server will be automatically used in the certificate file name
+- NB 2: to prefix must be the same for each of these three commands
+
+# Other
+
+1) The private key may be encrypted
