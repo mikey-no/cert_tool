@@ -14,7 +14,7 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 > You could then use these certificates and keys within a TLS terminating proxy in front of your application without 
 > wondering if the certificates are even working or not. :relieved:
 
-> You would have to trust the certificates authority and for the use in a lab context then that should be fine.
+> You would have to trust the certificates authority!! For use in a lab context then that should be fine.
 
 ## Overview of how it works
 
@@ -98,6 +98,9 @@ Then open in a web browser:
 - tls:       ```https://localhost:5001```
 - mtls:      ```https://localhost:5002```
 
+CertTool would need to be commented differently to run each of the above configurations. The 'recipes' are included 
+in the script (CertTool.py). 
+
 # Run from the CA
 
 Initialise the Certificate Authority
@@ -124,6 +127,12 @@ python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_c
 - NB 1: the hostname of the leaf server will be automatically used in the certificate file name
 - NB 2: to prefix must be the same for each of these three commands
 
+The coommand to run mTLS not implemented in a stand alone application like has been done with the leaf and root scripts.
+The functionality is within CertTool.py, just not exposed.
+
 # Other
 
-1) The private key may be encrypted
+1) The private key may be encrypted (but has not been fully tested)
+2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/), when I 
+started this project I also wrote a scokets based solution without FastAPI (but I have not included this in this 
+project).
