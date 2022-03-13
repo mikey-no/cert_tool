@@ -127,12 +127,12 @@ python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_c
 - NB 1: the hostname of the leaf server will be automatically used in the certificate file name
 - NB 2: to prefix must be the same for each of these three commands
 
-The coommand to run mTLS not implemented in a stand alone application like has been done with the leaf and root scripts.
+The command to run mTLS not implemented in a stand-alone application like has been done with the leaf and root scripts.
 The functionality is within CertTool.py, just not exposed.
 
 # Other
 
 1) The private key may be encrypted (but has not been fully tested)
 2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/), when I 
-started this project I also wrote a scokets based solution without FastAPI (but I have not included this in this 
+started this project I also wrote a sockets based solution without FastAPI (but I have not included this in this 
 project).
