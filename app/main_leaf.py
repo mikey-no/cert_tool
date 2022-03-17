@@ -4,7 +4,7 @@ import pathlib
 import socket
 import sys
 
-from app.CertTool import CertTool
+from CertTool import CertTool
 
 __app__ = 'leaf_cert_tool'
 __version__ = '0.0.1'

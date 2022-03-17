@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import sys
 from multiprocessing import Process
 
 import pytest
@@ -8,6 +9,9 @@ import uvicorn
 from cryptography.x509 import CertificateSigningRequest, Certificate
 
 from fastapi import FastAPI
+
+# test path fix
+sys.path.append(str(pathlib.Path().cwd() / 'app'))
 
 from app.CertTool import CertTool
 from app.main_leaf import create_csr

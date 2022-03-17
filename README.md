@@ -72,6 +72,7 @@ def tls_web_server_process(cert_path, private_key_path):
 
 # Setup
 
+from the project root folder ```cert_tool```
 ```commandline
 python -m venv venv
 .\venv\scripts\activate.bat
@@ -135,6 +136,6 @@ The functionality is within CertTool.py, just not exposed.
 # Other
 
 1) The private key may be encrypted (but has not been fully tested)
-2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/), when I 
-started this project I also wrote a sockets based solution without FastAPI (but I have not included this in this 
-project).
+2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/).
+3) Password functionality is not fully tested in main_root.py
+4) Log settings not fully tested

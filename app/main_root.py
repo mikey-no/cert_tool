@@ -4,7 +4,7 @@ import pathlib
 import sys
 
 from cryptography.x509 import Certificate
-
+sys.path.append(str(pathlib.Path().cwd()))
 from app.CertTool import CertTool
 
 __app__ = 'root_cert_tool'
@@ -165,7 +165,6 @@ def sign_csr(sign_csr_file: pathlib.Path,
              prefix: str,
              location: pathlib.Path,
              root_ca_common_name: str = root_ca_common_name) -> Certificate | None:
-
     if sign_csr_file.exists():
         log.info(f'signing csr: {sign_csr_file}')
         pseudo_leaf = CertTool(prefix=prefix, common_name='leaf_temp_common_name', location=location)
