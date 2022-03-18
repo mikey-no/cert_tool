@@ -91,6 +91,36 @@ python -m pytest --capture=no
 
 # Run
 
+## Run from the CA
+
+Initialise the Certificate Authority
+
+```commandline
+python .\app\main_root.py --prefix dev --create_root
+```
+
+## Run from the Leaf Server 
+
+Initialise the Leaf private, public then create a certificate signing request
+
+```commandline
+python .\app\main_leaf.py --prefix dev
+```
+
+## Run from the CA (again)
+
+Sign the certificate signing request creating a leaf certificate 
+
+
+```commandline
+python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem --san *.server1.lab server1.lab www.server1.lab
+```
+
+
+## Run just CertTool
+
+Just CertTool, without the functionality broken out into separate programmes (as above
+)
 ```commandline
 python .\app\CertTool.py
 ```
@@ -104,29 +134,6 @@ Then open in a web browser:
 CertTool would need to be commented differently to run each of the above configurations. The 'recipes' are included 
 in the script (CertTool.py). 
 
-# Run from the CA
-
-Initialise the Certificate Authority
-
-```commandline
-python .\app\main_root.py --prefix dev --create_root
-```
-
-# Run from the Leaf Server 
-
-Initialise the Leaf private, public then create a certificate signing request
-
-```commandline
-python .\app\main_leaf.py --prefix dev
-```
-
-# Run from the CA (again)
-
-Sign the certificate signing request creating a leaf certificate 
-
-```commandline
-python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem
-```
 - NB 1: the hostname of the leaf server will be automatically used in the certificate file name
 - NB 2: to prefix must be the same for each of these three commands
 

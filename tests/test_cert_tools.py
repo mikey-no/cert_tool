@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import socket
 import sys
 from multiprocessing import Process
 
@@ -321,11 +322,57 @@ def test_main_root_and_main_leaf(tmp_path):
     leaf_cert_tool = create_csr(prefix=prefix, location=tmp_path)
     # main_root_sign_csr_cmd_line = f'--prefix test --sign_csr {tmp_path}/certs/dev/{socket.getfqdn()}_csr.pem'
     leaf_cert_tool.cert = sign_csr(leaf_cert_tool.csr_file, prefix=prefix, location=tmp_path,
-                                   root_ca_common_name=root_ca_common_name)
+                                   root_ca_common_name=root_ca_common_name, subject_alternate_name=None)
     leaf_cert_tool.save_cert()
     assert leaf_cert_tool.cert_file.exists()
     assert root_ca.cert_file.exists()
 
+    log.info('running web server with certs')
+    web_server_process_handle = tls_web_server_process(leaf_cert_tool.cert_file,
+                                                       leaf_cert_tool.private_key_file)
+    next(web_server_process_handle)  # use next to use the yielded iterator
+    log.info('testing the web server and certs')
+    r = requests.get('https://localhost:5001', verify=root_ca.cert_file, proxies=proxies, )
+    assert r.status_code == 200
+    assert r.json() == {'message': 'Hello World - bingo - bang'}
+    try:
+        next(web_server_process_handle)
+    except StopIteration:
+        pass
+
+
+def test_main_root_and_main_leaf_with_san(tmp_path):
+    prefix = 'test'
+    root_ca_common_name = 'test root ca'
+    san_list = [
+        'abcd.com',
+        '*.abbc.com',
+        'abcd.com',
+        'localhost',
+        'efghuhsss',
+        socket.getfqdn(),
+        socket.gethostname(),
+    ]
+    # main_root_create_root_cmd_line = f'--prefix test --create_root --location {tmp_path}'
+    root_ca = create_root(prefix=prefix, root_ca_common_name=root_ca_common_name, location=tmp_path)
+    # main_leaf_create_csr_cmd_line = f'--prefix test --location {tmp_path}'
+    leaf_cert_tool = create_csr(prefix=prefix, location=tmp_path)
+    # main_root_sign_csr_cmd_line =
+    # f'--prefix test
+    # --sign_csr {tmp_path}/certs/dev/{socket.getfqdn()}_csr.pem
+    # --sam list'
+    leaf_cert_tool.cert = sign_csr(leaf_cert_tool.csr_file,
+                                   prefix=prefix,
+                                   location=tmp_path,
+                                   root_ca_common_name=root_ca_common_name,
+                                   subject_alternate_name=san_list)
+    leaf_cert_tool.save_cert()
+    assert leaf_cert_tool.cert_file.exists()
+    assert root_ca.cert_file.exists()
+    # remove duplicates
+    out_list = list(dict.fromkeys(leaf_cert_tool.cert_info()['subject_alternate_names']))
+    ref_list = list(dict.fromkeys(san_list))
+    assert out_list.sort() == ref_list.sort()
     log.info('running web server with certs')
     web_server_process_handle = tls_web_server_process(leaf_cert_tool.cert_file,
                                                        leaf_cert_tool.private_key_file)
