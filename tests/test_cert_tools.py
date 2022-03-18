@@ -21,6 +21,10 @@ log = logging.getLogger(__name__)
 
 app = FastAPI()
 
+proxies = {
+    "http": None,
+    "https": None,
+}
 
 @app.get("/")
 async def read_main():
@@ -148,7 +152,7 @@ def test_ca_signed_server(tmp_path):
                                                        cert_tool_leaf.private_key_file)
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info('testing the web server and certs')
-    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, )
+    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, proxies=proxies, )
     assert r.status_code == 200
     assert r.json() == {'message': 'Hello World - bingo - bang'}
     try:
@@ -204,7 +208,7 @@ def test_ca_signed_server_with_private_key_encryption(tmp_path):
     web_server_process_handle = tls_web_server_process(cert_tool_leaf.cert_file, cert_tool_leaf.private_key_file)
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info('testing the web server and certs')
-    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, )
+    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, proxies=proxies,)
     assert r.status_code == 200
     assert r.json() == {'message': 'Hello World - bingo - bang'}
     try:
@@ -298,7 +302,8 @@ def test_ca_signed_server_with_mtls(tmp_path):
     r = requests.get('https://localhost:5002',
                      verify=cert_tool_root.cert_file,
                      # cert - tuple order must match client_cert then client_key
-                     cert=(cert_tool_client.cert_file, cert_tool_client.private_key_file))
+                     cert=(cert_tool_client.cert_file, cert_tool_client.private_key_file),
+                     proxies=proxies,)
     assert r.status_code == 200
     assert r.json() == {'message': 'Hello World - bingo - bang'}
     try:
@@ -326,7 +331,7 @@ def test_main_root_and_main_leaf(tmp_path):
                                                        leaf_cert_tool.private_key_file)
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info('testing the web server and certs')
-    r = requests.get('https://localhost:5001', verify=root_ca.cert_file, )
+    r = requests.get('https://localhost:5001', verify=root_ca.cert_file, proxies=proxies, )
     assert r.status_code == 200
     assert r.json() == {'message': 'Hello World - bingo - bang'}
     try:

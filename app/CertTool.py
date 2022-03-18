@@ -52,6 +52,10 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
+proxies = {
+    "http": None,
+    "https": None,
+}
 
 class CertTool:
 
@@ -674,7 +678,7 @@ def ca_certs_tls_recipe() -> None:
     log.info(f'testing the web server and certs: open url: {url}')
     log.info(f'.. import ca cert into your web browser as trusted: {cert_location}')
 
-    r = requests.get(url, verify=cert_tool_root.cert_file, )
+    r = requests.get(url, verify=cert_tool_root.cert_file, proxies=proxies, )
     if r.json() == {'message': 'Hello World - bingo - bang'}:
         log.info('local test passed')
     else:
@@ -731,7 +735,7 @@ def ca_certs_tls_recipe_private_key_encryption() -> None:
     log.info(f'testing the web server and certs: open url: {url}')
     log.info(f'.. import ca cert into your web browser as trusted: {cert_location}')
 
-    r = requests.get(url, verify=cert_tool_root.cert_file, )
+    r = requests.get(url, verify=cert_tool_root.cert_file, proxies=proxies,)
     if r.json() == {'message': 'Hello World - bingo - bang'}:
         log.info('local test passed')
     else:
@@ -792,7 +796,8 @@ def ca_certs_mtls_recipe() -> None:
     r = requests.get(url,
                      verify=cert_tool_root.cert_file,
                      # cert - tuple order must match client_cert then client_key
-                     cert=(cert_tool_client.cert_file, cert_tool_client.private_key_file))
+                     cert=(cert_tool_client.cert_file, cert_tool_client.private_key_file),
+                     proxies=proxies,)
 
     if r.json() == {'message': 'Hello World - bingo - bang'}:
         log.info('local test passed')
