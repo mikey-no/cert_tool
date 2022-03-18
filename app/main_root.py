@@ -1,9 +1,12 @@
 import argparse
 import logging
 import pathlib
+import socket
 import sys
+from typing import List
 
 from cryptography.x509 import Certificate
+
 sys.path.append(str(pathlib.Path().cwd()))
 from app.CertTool import CertTool
 
@@ -78,6 +81,14 @@ def parse_args() -> argparse:
                         dest='sign_csr',
                         type=pathlib.Path,
                         help='Sign the csr (pem file) with the root ca key of the given prefix, outputting new cert',
+                        )
+
+    parser.add_argument('-n', '--san',
+                        dest='san',
+                        nargs='*',
+                        type=str,
+                        help='list of zero of more subject alternate names, some like localhost are added '
+                             'automatically, must be used with --sign_csr'
                         )
 
     parser.add_argument('-ll', '--log-level',
@@ -164,7 +175,9 @@ def re_use_existing_ca(prefix: str,
 def sign_csr(sign_csr_file: pathlib.Path,
              prefix: str,
              location: pathlib.Path,
-             root_ca_common_name: str = root_ca_common_name) -> Certificate | None:
+             subject_alternate_name: List[str] | None = None,
+             root_ca_common_name: str = root_ca_common_name,
+             ) -> Certificate | None:
     if sign_csr_file.exists():
         log.info(f'signing csr: {sign_csr_file}')
         pseudo_leaf = CertTool(prefix=prefix, common_name='leaf_temp_common_name', location=location)
@@ -182,7 +195,7 @@ def sign_csr(sign_csr_file: pathlib.Path,
             re_used_root_ca.load_cert()
             re_used_root_ca.load_private_key()
             if pseudo_leaf_load_csr_result is not None:
-                pseudo_leaf.cert = re_used_root_ca.sign_certificate(pseudo_leaf.csr)
+                pseudo_leaf.cert = re_used_root_ca.sign_certificate(pseudo_leaf.csr, subject_alternate_name)
                 log.info(f'Leaf cert: {pseudo_leaf.cert}')
                 pseudo_leaf.save_cert()
                 return pseudo_leaf.cert
@@ -190,7 +203,7 @@ def sign_csr(sign_csr_file: pathlib.Path,
                 log.error(f'Unable to sign the csr the cert was not loaded: {pseudo_leaf_load_csr_result}')
                 return None
     else:
-        log.critical(f'csr foes not exist: {sign_csr_file}')
+        log.critical(f'csr file not found: {sign_csr_file}')
         sys.exit(-1)
 
 
@@ -206,19 +219,29 @@ def main():
         sys.exit(0)
 
     if args.create_root and args.sign_csr:
-        log.critical('Cannot create a root ca and sign a csr at the same time')
+        log.critical('Cannot create a root ca and sign a csr at the same time (optionally use with --san)')
         sys.exit(-1)
 
     if args.create_root is False and args.sign_csr is None:
         log.critical('Create a root ca (--create_root) or sign a csr (--sign_csr), pick one')
         sys.exit(-1)
 
+    if args.san and args.create_root:
+        log.critical('Cannot set a list of subject alternate names until the cert is being signed, only use with '
+                     'sign_csr')
+
     if args.create_root:
         create_root(args.prefix)
         sys.exit(0)
 
     if args.sign_csr:
-        sign_csr(sign_csr_file=args.sign_csr, prefix=args.prefix, location=args.location)
+        sign_csr(sign_csr_file=args.sign_csr,
+                 prefix=args.prefix,
+                 location=args.location,
+                 subject_alternate_name=args.san)
+        info_cert_tool = CertTool(prefix=args.prefix, common_name=socket.getfqdn(), location=args.location)
+        info_cert_tool.load_cert()
+        print(info_cert_tool.cert_info())
         sys.exit(0)
 
 

@@ -8,10 +8,12 @@ import socket
 import sys
 from multiprocessing import Process
 from types import NoneType
+from typing import List
 
 import requests
 import uvicorn
 from cryptography import x509
+from cryptography.hazmat._oid import ExtensionOID
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
@@ -56,6 +58,7 @@ proxies = {
     "http": None,
     "https": None,
 }
+
 
 class CertTool:
 
@@ -396,11 +399,45 @@ class CertTool:
         self.csr = req
         return None
 
-    def sign_certificate(self,  csr: x509.CertificateSigningRequest):
+    def make_subject_alternate_name(self, csr_common_name: str, name_list: List[str] = None):
+        """
+        Make a good list of subject alternate names
+        when prefix is prod_A or B then do not add the local host name or fqdn name to the san list
+        as this signing will be done on the ca host not the leaf host
+        add in the common_name too
+        """
+        out_list = [
+            x509.DNSName('localhost'),
+            x509.DNSName('cryptography.io'),
+            # x509.DNSName('parrot.cryptography.io'),
+            x509.DNSName(str(csr_common_name)),
+        ]
+        if self.prefix != 'prod_A' or self.prefix != 'prod_B':
+            if socket.getfqdn() is not None:
+                out_list.append(x509.DNSName(socket.getfqdn()))
+            if socket.gethostname() is not None:
+                out_list.append(x509.DNSName(socket.gethostname()))
+
+        if name_list is not None:
+            for name in name_list:
+                try:
+                    out_list.append(x509.DNSName(name))
+                except Exception as e:
+                    log.error(f'Invalid name, not able to add it as a Subject Alternate Name: {name}')
+        out_list = list(dict.fromkeys(out_list))
+        if x509.DNSName('None') in out_list:
+            out_list.remove(x509.DNSName('None'))
+        log.info(f'{len(out_list)} Subject Alternate Names added to the certificate: {out_list}')
+        return out_list
+
+    def sign_certificate(self,
+                         csr: x509.CertificateSigningRequest,
+                         subject_alternate_name: List[str] | None = None):
         """
         Authority signs the csr from the leaf with their private key issuing the certificate
         path_len=0 means this cert can only sign itself, not other certs,
         path_len=None, here
+        see: https://github.com/python-trio/trustme/blob/master/trustme/__init__.py?#L392
         """
         subject = self._get_subject_()
         # for full list of oid see:
@@ -415,14 +452,15 @@ class CertTool:
             .not_valid_before(datetime.datetime.utcnow()) \
             .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=10)) \
             .add_extension(x509.BasicConstraints(ca=False, path_length=None), True)
-        b = b.add_extension(x509.SubjectAlternativeName(
-            [
-                x509.DNSName(u'localhost'),  # apparently must have a san matching the common name
-                x509.DNSName(u'cryptography.io'),
-                x509.DNSName(u'parrot.cryptography.io'),
-                x509.DNSName(socket.getfqdn()),
-            ]
-        ), critical=False)
+        b = b.add_extension(
+            x509.SubjectAlternativeName(
+                self.make_subject_alternate_name(
+                    self.get_csr_common_name(csr),
+                    subject_alternate_name,
+                )
+            ),
+            critical=False
+        )
         cert = b.sign(self.private_key, self._hash(), default_backend())
         log.info(f'CSR has been signed, cert created with serial: {cert.serial_number}')
         return cert
@@ -517,7 +555,32 @@ class CertTool:
                             m[item.lower()] = thing
                         else:
                             m[item.lower()] = thing[0].value
-        self.cert_tool_info = m
+
+        try:
+            extensions = self.cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+            if extensions is not None:
+                m_san = []
+                for index, item in enumerate(extensions.value.get_values_for_type(x509.DNSName)):
+                    m_san.append(item)
+                m['subject_alternate_names'] = m_san
+            self.cert_tool_info = m
+        except Exception as e:
+            log.info('No Subject Alternate Name found')
+        return m
+
+    def get_csr_common_name(self, csr: x509.CertificateSigningRequest) -> str | None:
+        """ get the common name from the csr that is being signed  """
+        m: str | None = None
+        if isinstance(csr, x509.CertificateSigningRequest) is False:
+            log.error(f'CSR not found cannot find its common name')
+            return None
+
+        if hasattr(csr.subject, 'subject'):
+            subject: x509.Name = csr.subject
+            common_name = subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+            if common_name is not None:
+                m = common_name[0].value
+
         return m
 
     def save_cert_tool(self) -> None:
@@ -565,7 +628,7 @@ class CertTool:
         self.load_private_key()
         self.load_cert()
 
-    def load_common_name_from_csr(self) -> str|None:
+    def load_common_name_from_csr(self) -> str | None:
         if self.csr is None:
             log.warning('no csr found')
             return None
@@ -735,7 +798,7 @@ def ca_certs_tls_recipe_private_key_encryption() -> None:
     log.info(f'testing the web server and certs: open url: {url}')
     log.info(f'.. import ca cert into your web browser as trusted: {cert_location}')
 
-    r = requests.get(url, verify=cert_tool_root.cert_file, proxies=proxies,)
+    r = requests.get(url, verify=cert_tool_root.cert_file, proxies=proxies, )
     if r.json() == {'message': 'Hello World - bingo - bang'}:
         log.info('local test passed')
     else:
@@ -797,7 +860,7 @@ def ca_certs_mtls_recipe() -> None:
                      verify=cert_tool_root.cert_file,
                      # cert - tuple order must match client_cert then client_key
                      cert=(cert_tool_client.cert_file, cert_tool_client.private_key_file),
-                     proxies=proxies,)
+                     proxies=proxies, )
 
     if r.json() == {'message': 'Hello World - bingo - bang'}:
         log.info('local test passed')
