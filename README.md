@@ -119,8 +119,7 @@ python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_c
 
 ## Run just CertTool
 
-Just CertTool, without the functionality broken out into separate programmes (as above
-)
+Just CertTool, without the functionality broken out into separate programmes (as above)
 ```commandline
 python .\app\CertTool.py
 ```
