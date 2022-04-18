@@ -14,7 +14,7 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 > You could then use these certificates and keys within a TLS terminating proxy in front of your application without 
 > wondering if the certificates are even working or not. :relieved:
 
-> You would have to trust the certificates authority!! For use in a lab context then that should be fine.
+> I would only use this in a lab context. You would have to trust the certificate authority!! 
 
 ## Overview of how it works
 
@@ -68,7 +68,9 @@ def tls_web_server_process(cert_path, private_key_path):
 
 ## Runs on
 
-- Python 3.10
+- Python 3.10 (Windows 10, Ubuntu 20.04)
+- pytests do not run on the Ubuntu OS for a reason(s) I do not understand (error: "... port in use ..." - but not so 
+far as I can tell).
 
 # Setup
 
@@ -99,9 +101,38 @@ Initialise the Certificate Authority
 python .\app\main_root.py --prefix dev --create_root
 ```
 
-## Run from the Leaf Server 
+## Run the api web interface to the root CA
 
-Initialise the Leaf private, public then create a certificate signing request
+Assuming your CA is running from: 'ca_url.example.internal'
+
+```commandline
+python .\app\main_api.py --prefix dev --create_root 
+```
+In another window open...
+```commandline
+firefox http://ca_url.example.internal
+```
+
+See the API docs: http://ca_url.example.internal/docs
+
+## On the leaf server
+
+Run the command to request a certificate from the CA
+```commandline
+python .\app\main_leaf.py --prefix dev --ca_url http://ca_url.example.internal --san leaf.example.internal redleaf.example.internal
+```
+
+where:
+1) --ca_url is the url of the CA
+2) --san is a optional list of subject alternate names
+   1) The CA assumes you want localhost and the socket.fqdn() name from the leaf server adding to the san list by default
+3) prefix of the ca and leaf server must match
+
+The leaf cert name is the response back from the CA and is saved to a file prefixed with the socket.fqdn() name pem file.
+
+## Run from the Leaf Server (from command line only)
+
+Initialise the Leaf private, public and create a certificate signing request
 
 ```commandline
 python .\app\main_leaf.py --prefix dev
@@ -111,11 +142,9 @@ python .\app\main_leaf.py --prefix dev
 
 Sign the certificate signing request creating a leaf certificate 
 
-
 ```commandline
 python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem --san *.server1.lab server1.lab www.server1.lab
 ```
-
 
 ## Run just CertTool
 
@@ -142,6 +171,8 @@ The functionality is within CertTool.py, just not exposed.
 # Other
 
 1) The private key may be encrypted (but has not been fully tested)
-2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/).
+2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/) more
 3) Password functionality is not fully tested in main_root.py
-4) Log settings not fully tested
+4) Log settings not fully tested or implemented
+5) Need to make the main_leaf.py programme save the list of subject alternate names in the csr and the main_root.py use
+this list in creating the certs list of subject alternate names
