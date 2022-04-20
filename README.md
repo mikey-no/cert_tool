@@ -103,7 +103,7 @@ python .\app\main_root.py --prefix dev --create_root
 
 ## Run the api web interface to the root CA
 
-Assuming your CA is running from: 'ca_url.example.internal'
+Assuming your CA is running from a host with this fqdn: 'ca_url.example.internal'
 
 ```commandline
 python .\app\main_api.py --prefix dev --create_root 
@@ -140,7 +140,8 @@ python .\app\main_leaf.py --prefix dev
 
 ## Run from the CA (again)
 
-Sign the certificate signing request creating a leaf certificate 
+Sign the certificate signing request creating a leaf certificate, using the command line tool rather than the root_api
+web api.
 
 ```commandline
 python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem --san *.server1.lab server1.lab www.server1.lab
@@ -149,6 +150,10 @@ python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_c
 ## Run just CertTool
 
 Just CertTool, without the functionality broken out into separate programmes (as above)
+
+This command is show for completeness, it is not used anymore, it was one of the development stages the application 
+passed through.
+
 ```commandline
 python .\app\CertTool.py
 ```
