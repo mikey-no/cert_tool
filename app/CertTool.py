@@ -24,35 +24,7 @@ from cryptography.x509 import CertificateSigningRequest, Certificate
 from cryptography.x509.oid import NameOID
 from fastapi import FastAPI
 
-# Define the log format
-log_format = (
-    "[%(asctime)s] %(levelname)-8s %(name)-12s %(lineno)d %(funcName)s - %(message)s"
-)
-log_date_format = "%Y-%m-%d:%H:%M:%S"
-
-# show all messages below in order of seriousness
-log_level = logging.DEBUG  # shows all
-# log_level = logging.INFO  # shows info and below
-# log_level = logging.WARNING
-# log_level = logging.ERROR
-# log_level = logging.CRITICAL
-
-logging.basicConfig(
-    # Define logging level
-    level=log_level,
-    # Define the date format
-    datefmt=log_date_format,
-    # Declare the object we created to format the log messages
-    format=log_format,
-    # Force this log handler to take over the others that may have been declared in other modules
-    # see: https://github.com/python/cpython/blob/3.8/Lib/logging/__init__.py#L1912
-    force=True,
-    # Declare handlers
-    handlers=[
-        # logging.FileHandler(config.logfile, encoding='UTF-8'),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
+sys.path.append(str(pathlib.Path().cwd()))
 
 log = logging.getLogger(__name__)
 
@@ -71,8 +43,6 @@ class CertTool:
         use_private_key_encryption: bool = False,
         private_key_encryption_password: bytes | str | None = None,
     ):
-
-        # TODO: creates a folder called dev that is not needed
 
         if common_name is None:
             self.common_name = (
