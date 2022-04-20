@@ -21,7 +21,10 @@ common_name = socket.getfqdn()
 
 
 def create_csr(
-    prefix: str, location: pathlib.Path | None = None, common_name=common_name
+    prefix: str,
+    location: pathlib.Path | None = None,
+    common_name=common_name,
+    san: List[str] | None = None,
 ) -> CertTool:
     """
     Create a leaf private key under the location prefix and certificate signing request
@@ -41,7 +44,10 @@ def create_csr(
         location=location, common_name=f"{common_name}", prefix=prefix
     )
     cert_tool_leaf.create_private_key()
-    cert_tool_leaf.create_csr()
+    if san is None:
+        cert_tool_leaf.create_csr()
+    else:
+        cert_tool_leaf.create_csr(san=san)
     cert_tool_leaf.save_csr()
     # log.debug(f'cert_tool_leaf.csr_file.exists: {cert_tool_leaf.csr_file.exists()}')
     cert_tool_leaf.save_private_key()
@@ -226,7 +232,10 @@ def main():
     if args.location is None:
         log.critical(f"Location is none, using default")
 
-    cert_tool = create_csr(args.prefix, location=args.location)
+    if args.san is None:
+        cert_tool = create_csr(args.prefix, location=args.location, san=None)
+    else:
+        cert_tool = create_csr(args.prefix, location=args.location, san=args.san)
     if cert_tool.csr is not None:
         if args.ca_url is None:
             log.info(

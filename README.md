@@ -135,7 +135,7 @@ The leaf cert name is the response back from the CA and is saved to a file prefi
 Initialise the Leaf private, public and create a certificate signing request
 
 ```commandline
-python .\app\main_leaf.py --prefix dev
+python .\app\main_leaf.py --prefix dev --san abc.example.internal bcd.example.internal
 ```
 
 ## Run from the CA (again)
@@ -144,15 +144,15 @@ Sign the certificate signing request creating a leaf certificate, using the comm
 web api.
 
 ```commandline
-python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem --san *.server1.lab server1.lab www.server1.lab
+python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem
 ```
 
 ## Run just CertTool
 
-Just CertTool, without the functionality broken out into separate programmes (as above)
-
 This command is show for completeness, it is not used anymore, it was one of the development stages the application 
 passed through.
+
+Just CertTool, without the functionality broken out into separate programmes (as above)
 
 ```commandline
 python .\app\CertTool.py
@@ -179,5 +179,3 @@ The functionality is within CertTool.py, just not exposed.
 2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/) more
 3) Password functionality is not fully tested in main_root.py
 4) Log settings not fully tested or implemented
-5) Need to make the main_leaf.py programme save the list of subject alternate names in the csr and the main_root.py use
-this list in creating the certs list of subject alternate names

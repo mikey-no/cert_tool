@@ -25,6 +25,7 @@ from cryptography.x509.oid import NameOID
 from fastapi import FastAPI
 
 sys.path.append(str(pathlib.Path().cwd()))
+import utils
 
 log = logging.getLogger(__name__)
 
@@ -437,7 +438,7 @@ class CertTool:
 
         return self.cert_file
 
-    def create_csr(self) -> None:
+    def create_csr(self, san: List[str] | None = None) -> None:
         """
         Create a certificate signing request that will to be need to be sent to the CA to be signed
         """
@@ -453,11 +454,28 @@ class CertTool:
                 x509.NameAttribute(NameOID.COMMON_NAME, self.common_name),
             ]
         )
+
         b = x509.CertificateSigningRequestBuilder()
-        req = b.subject_name(name).sign(
-            self.private_key, self._hash(), default_backend()
-        )
-        self.csr = req
+
+        if san is None:
+            csr = b.subject_name(name).sign(
+                self.private_key, self._hash(), default_backend()
+            )
+        else:
+            csr = (
+                b.subject_name(name)
+                .add_extension(
+                    x509.SubjectAlternativeName(
+                        self.make_subject_alternate_name(self.common_name, san)
+                    ),
+                    critical=False,
+                )
+                .sign(self.private_key, self._hash(), default_backend())
+            )
+            for ext in csr.extensions:
+                log.info(ext)
+        log.info(csr.subject)
+        self.csr = csr
         return None
 
     def make_subject_alternate_name(
@@ -468,6 +486,7 @@ class CertTool:
         when prefix is prod_A or B then do not add the local host name or fqdn name to the san list
         as this signing will be done on the ca host not the leaf host
         add in the common_name too
+        Does not work with IP addresses
         """
         out_list = [
             x509.DNSName("localhost"),
@@ -537,6 +556,8 @@ class CertTool:
         )
         cert = b.sign(self.private_key, self._hash(), default_backend())
         log.info(f"CSR has been signed, cert created with serial: {cert.serial_number}")
+        for ext in csr.extensions:
+            log.info(ext)
         return cert
 
     def save_cert_as_p12(
