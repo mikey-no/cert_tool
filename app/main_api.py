@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from starlette import status
 
+sys.path.append(str(pathlib.Path().cwd()))
 from app import utils
 from app.CertTool import CertTool
 from app.pydantic_schemas import CSRPydanticModel, CAInfoModel, RootCertInfoModel

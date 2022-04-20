@@ -484,18 +484,6 @@ class CertTool:
             ]
         )
         b = x509.CertificateSigningRequestBuilder()
-
-        #
-
-        # https://cryptography.io/en/latest/x509/reference/#x-509-certificate-builder
-
-        # b.add_extension(
-        #     x509.SubjectAlternativeName(
-        #         [x509.DNSName(u'cryptography.io')]
-        #     ),
-        #     critical=False
-
-        #
         req = b.subject_name(name).sign(
             self.private_key, self._hash(), default_backend()
         )
