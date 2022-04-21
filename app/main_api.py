@@ -179,7 +179,7 @@ def post_sign_csr(
     root_ca_common_name=Depends(depends_root_ca_common_name),
 ):
     """
-    Take a csr in a pem string json format (provided by the main_leaf.py programme)
+    Take a csr in a pem string json format (provided by the main_leaf.py client programme)
     and return a certificate file signed by the CA files accessed by this programme.
     Json created as follows:
 

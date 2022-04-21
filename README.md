@@ -16,56 +16,6 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 
 > I would only use this in a lab context. You would have to trust the certificate authority!! 
 
-## Overview of how it works
-
-1. import
-```python
-from multiprocessing import Process
-```
-- for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
-  - the private key relates to the certificate and as 'only you' have the private key then the cert must be yours
-```python
-
-def tls_server(cert_file: pathlib.Path, private_key_file: pathlib.Path):
-    host = 'localhost'
-    port = 5001
-    log.info(f'Running TLS server: {host}:{port}')
-    uvicorn.run(app,
-                host=host,
-                port=port,
-                log_level="debug",
-                ssl_keyfile=private_key_file,
-                ssl_certfile=cert_file,
-                )
-```
-2. run the TLS Server process 
-  - yield the new process, pass in the parameters as an enum to the tls_server above
-```python
-
-def tls_web_server_process(cert_path, private_key_path):
-    log.info(f'Starting TLS server process: {cert_path}')
-    p = Process(target=tls_server, args=(cert_path, private_key_path,), daemon=True)
-    p.start()
-    log.info(f'TLS Server process started with cert: {cert_path}')
-    yield p
-    p.kill()  # Cleanup after test
-    log.info('TLS Server process stopped')
-    return
-```
-3. in the test function after the certs are created run the tls web server
-  - then call the returned iterator (from the above yield generator to close the server down when the tests are complete)
-```python
-    web_server_process_handle = tls_web_server_process(cert_tool_leaf.cert_file, cert_tool_leaf.private_key_file)
-    next(web_server_process_handle)  # use next to use the yielded iterator
-    log.info('testing the web server and certs')
-    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, )
-    # assert some tests on r
-    try:
-        next(web_server_process_handle)
-    except StopIteration:
-        pass
-```
-
 ## Runs on
 
 - Python 3.10 (Windows 10, Ubuntu 20.04)
@@ -98,29 +48,33 @@ python -m pytest --capture=no
 Initialise the Certificate Authority
 
 ```commandline
-python .\app\main_root.py --prefix dev --create_root
+python .\app\main_root.py --prefix dev --create_root --location certs\dev\root
 ```
 
 ## Run the api web interface to the root CA
 
-Assuming your CA is running from a host with this fqdn: 'ca_url.example.internal'
+Assuming your CA is running from a host with this url: 'localhost'
 
 ```commandline
-python .\app\main_api.py --prefix dev --create_root 
+python .\app\main_api.py --prefix dev --location certs\dev\root
 ```
 In another window open...
 ```commandline
-firefox http://ca_url.example.internal
+firefox http://localhost
 ```
 
-See the API docs: http://ca_url.example.internal/docs
+See the API docs: http://localhost/docs
+
+The ca works on http not https to enable a client to start the communication with no prior root ca installed.
 
 ## On the leaf server
 
 Run the command to request a certificate from the CA
 ```commandline
-python .\app\main_leaf.py --prefix dev --ca_url http://ca_url.example.internal --san leaf.example.internal redleaf.example.internal
+python .\app\main_leaf.py --prefix dev --ca_url http://localhost --san leaf.example.internal redleaf.example.internal --location cert\dev\leaf
 ```
+
+The root ca signed cert is downloaded to ```cert\dev\leaf\<leaf fdqn>_cert.pem```, see the console output.
 
 where:
 1) --ca_url is the url of the CA
@@ -173,9 +127,58 @@ in the script (CertTool.py).
 The command to run mTLS not implemented in a stand-alone application like has been done with the leaf and root scripts.
 The functionality is within CertTool.py, just not exposed.
 
+## Overview of how it works
+
+1. import
+```python
+from multiprocessing import Process
+```
+- for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
+  - the private key relates to the certificate and as 'only you' have the private key then the cert must be yours
+```python
+
+def tls_server(cert_file: pathlib.Path, private_key_file: pathlib.Path):
+    host = 'localhost'
+    port = 5001
+    log.info(f'Running TLS server: {host}:{port}')
+    uvicorn.run(app,
+                host=host,
+                port=port,
+                log_level="debug",
+                ssl_keyfile=private_key_file,
+                ssl_certfile=cert_file,
+                )
+```
+2. run the TLS Server process 
+  - yield the new process, pass in the parameters as an enum to the tls_server above
+```python
+
+def tls_web_server_process(cert_path, private_key_path):
+    log.info(f'Starting TLS server process: {cert_path}')
+    p = Process(target=tls_server, args=(cert_path, private_key_path,), daemon=True)
+    p.start()
+    log.info(f'TLS Server process started with cert: {cert_path}')
+    yield p
+    p.kill()  # Cleanup after test
+    log.info('TLS Server process stopped')
+    return
+```
+3. in the test function after the certs are created run the tls web server
+  - then call the returned iterator (from the above yield generator to close the server down when the tests are complete)
+```python
+    web_server_process_handle = tls_web_server_process(cert_tool_leaf.cert_file, cert_tool_leaf.private_key_file)
+    next(web_server_process_handle)  # use next to use the yielded iterator
+    log.info('testing the web server and certs')
+    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, )
+    # assert some tests on r
+    try:
+        next(web_server_process_handle)
+    except StopIteration:
+        pass
+```
+
 # Other
 
 1) The private key may be encrypted (but has not been fully tested)
 2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/) more
-3) Password functionality is not fully tested in main_root.py
-4) Log settings not fully tested or implemented
+3) Log settings not fully tested or implemented
