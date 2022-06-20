@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import logging
 import pathlib
 import sys
@@ -15,7 +16,8 @@ from app.CertTool import CertTool
 from app.pydantic_schemas import CSRPydanticModel, CAInfoModel, RootCertInfoModel
 
 __app__ = "root_cert_tool_api"
-__version__ = "0.0.2"
+__version__ = "0.0.3"
+default_ini_file: pathlib.Path = pathlib.Path().cwd() / r".\settings\settings.ini"
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +38,25 @@ _location: pathlib.Path | None = None
 def depends_location():
     log.debug(f"location: {_location}")
     return _location
+
+
+def get_ini(setting: str, ini_file: pathlib.Path = default_ini_file) -> str | None:
+    """
+    load the ini file setting from the ini file default section
+    returns None if the setting request is not found
+    """
+    if ini_file.exists() is False:
+        log.info(f"Ini settings file not found: {ini_file}")
+    else:
+        log.info(f"Ini settings file used: {ini_file} - {setting}")
+
+    config = configparser.ConfigParser()
+    config.read(ini_file)
+    if setting in config["default"]:
+        return config["default"][setting]
+    else:
+        log.error(f"Setting file does not contain the setting requested: {setting}")
+        return None
 
 
 @utils.benchmark
@@ -250,27 +271,33 @@ def server(host: str = "localhost", port: int = 80):
 @utils.counter
 def main():
     args = parse_args()
+    global _location
+    global prefix
 
     if args.version:
         log.info(f"Application: {__app__} - Version: {__version__}")
         sys.exit(0)
 
-    if args.prefix is None:
-        log.critical(f"Prefix is none, select a valid prefix")
-        sys.exit(-1)
-    else:
-        global prefix
-        prefix = args.prefix
+    prefix = get_ini("prefix")
+    if prefix is None:
+        if args.prefix is None:
+            log.critical("No prefix found")
+            sys.exit(-1)
+        else:
+            prefix = args.prefix
 
-    if args.location is None:
-        log.info(f"Location is none, select a valid location")
-        sys.exit(-1)
-    else:
-        global _location
-        _location = args.location
-        log.info(
-            f"Location: {_location.absolute()} - exists {_location.absolute().exists()}"
-        )
+    _location = pathlib.Path(get_ini("location"))
+    if _location is None:
+        if args.location is None:
+            log.critical(f"No location found")
+            sys.exit(-1)
+        else:
+            _location = args.location
+
+    log.info(f"Prefix: {prefix}")
+    log.info(
+        f"Location: {_location.absolute()} - exists {_location.absolute().exists()}"
+    )
 
     server()
 

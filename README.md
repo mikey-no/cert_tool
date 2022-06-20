@@ -67,6 +67,9 @@ See the API docs: http://localhost/docs
 
 The ca works on http not https to enable a client to start the communication with no prior root ca installed.
 
+### settings.ini
+main_api will take a settings.ini file in subdirectory of the current working directory with the prefix and location values.
+
 ## On the leaf server
 
 Run the command to request a certificate from the CA
