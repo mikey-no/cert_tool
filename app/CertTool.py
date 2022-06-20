@@ -45,17 +45,17 @@ class CertTool:
         private_key_encryption_password: bytes | str | None = None,
     ):
 
+        if prefix is None:
+            self.set_prefix("default")
+        else:
+            self.set_prefix(prefix)
+
         if common_name is None:
             self.common_name = (
                 socket.getfqdn()
             )  # may be replaced by calling self.set_common_name
         else:
             self.set_common_name(common_name)
-
-        if prefix is None:
-            self.set_prefix("default")
-        else:
-            self.set_prefix(prefix)
 
         # TODO: remove self.use_private_key_encryption replace with a check for password
         #  is not len 0
@@ -96,7 +96,12 @@ class CertTool:
 
     def set_common_name(self, common_name: str):
         """must set the common_name, prefix and location for a valid CertTool operation"""
-        self.common_name = common_name.replace(" ", "_").replace(".", "-")
+        if hasattr(self, "prefix") is False:
+            self.common_name = common_name.replace(" ", "_").replace(".", "-")
+        else:
+            self.common_name = (
+                f'{self.prefix}-{common_name.replace(" ", "_").replace(".", "-")}'
+            )
         # log.debug('set file names')
         # self._set_file_names()
 

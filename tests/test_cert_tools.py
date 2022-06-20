@@ -141,19 +141,15 @@ def test_self_signed_server(tmp_path):
 
 def test_ca_signed_server(tmp_path):
     log.info("creating ca signed certs")
-
-    cert_tool_root = CertTool(
-        location=tmp_path, common_name="root cert", prefix="pytest"
-    )
+    prefix = "pytest"
+    cert_tool_root = CertTool(location=tmp_path, common_name="root cert", prefix=prefix)
     cert_tool_root.create_private_key()
     cert_tool_root.create_root_cert(100)
     cert_tool_root.save_cert()
     assert cert_tool_root.save_cert().exists()
 
     common_name = "localhost"
-    cert_tool_leaf = CertTool(
-        location=tmp_path, common_name=common_name, prefix="pytest"
-    )
+    cert_tool_leaf = CertTool(location=tmp_path, common_name=common_name, prefix=prefix)
     cert_tool_leaf.create_private_key()
 
     cert_tool_leaf.create_csr()
@@ -163,7 +159,7 @@ def test_ca_signed_server(tmp_path):
         f"ST={cert_tool_leaf.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_leaf.LOCALITY_NAME},"
         f"O={cert_tool_leaf.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
 
     cert_tool_leaf.cert = cert_tool_root.sign_certificate(cert_tool_leaf.csr)
@@ -173,7 +169,7 @@ def test_ca_signed_server(tmp_path):
         f"ST={cert_tool_leaf.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_leaf.LOCALITY_NAME},"
         f"O={cert_tool_leaf.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
     cert_tool_leaf.save_cert()
     cert_tool_leaf.save_private_key()
@@ -199,6 +195,7 @@ def test_ca_signed_server(tmp_path):
 
 
 def test_ca_signed_server_with_private_key_encryption(tmp_path):
+    prefix = "pytest"
     password = "1234"
     cert_tool_root = CertTool(
         location=tmp_path,
@@ -233,7 +230,7 @@ def test_ca_signed_server_with_private_key_encryption(tmp_path):
         f"ST={cert_tool_leaf.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_leaf.LOCALITY_NAME},"
         f"O={cert_tool_leaf.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
 
     cert_tool_leaf.cert = cert_tool_root.sign_certificate(cert_tool_leaf.csr)
@@ -243,7 +240,7 @@ def test_ca_signed_server_with_private_key_encryption(tmp_path):
         f"ST={cert_tool_leaf.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_leaf.LOCALITY_NAME},"
         f"O={cert_tool_leaf.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
     cert_tool_leaf.save_cert()
     cert_tool_leaf.save_private_key()
@@ -270,10 +267,11 @@ def test_ca_signed_server_with_private_key_encryption(tmp_path):
 
 def test_ca_signed_server_with_private_key_encryption_bad_password(tmp_path):
     password = "1234"
+    prefix = "pytest"
     cert_tool_root = CertTool(
         location=tmp_path,
         common_name="root cert",
-        prefix="pytest",
+        prefix=prefix,
         use_private_key_encryption=True,
     )
     cert_tool_root.create_private_key()
@@ -284,7 +282,7 @@ def test_ca_signed_server_with_private_key_encryption_bad_password(tmp_path):
     cert_tool_root = CertTool(
         location=tmp_path,
         common_name="root cert",
-        prefix="pytest",
+        prefix=prefix,
         use_private_key_encryption=True,
     )
     with pytest.raises(ValueError):
@@ -294,19 +292,16 @@ def test_ca_signed_server_with_private_key_encryption_bad_password(tmp_path):
 
 def test_ca_signed_server_with_mtls(tmp_path):
     log.info("creating ca signed certs with mtls client")
+    prefix = "pytest"
     # root ca
-    cert_tool_root = CertTool(
-        location=tmp_path, common_name="root cert", prefix="pytest"
-    )
+    cert_tool_root = CertTool(location=tmp_path, common_name="root cert", prefix=prefix)
     cert_tool_root.create_private_key()
     cert_tool_root.create_root_cert(100)
     cert_tool_root.save_cert()
     assert cert_tool_root.save_cert().exists()
     # leaf server cert
     common_name = "localhost"
-    cert_tool_leaf = CertTool(
-        location=tmp_path, common_name=common_name, prefix="pytest"
-    )
+    cert_tool_leaf = CertTool(location=tmp_path, common_name=common_name, prefix=prefix)
     cert_tool_leaf.create_private_key()
     cert_tool_leaf.create_csr()
     assert isinstance(cert_tool_leaf.csr, CertificateSigningRequest)
@@ -315,7 +310,7 @@ def test_ca_signed_server_with_mtls(tmp_path):
         f"ST={cert_tool_leaf.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_leaf.LOCALITY_NAME},"
         f"O={cert_tool_leaf.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
     cert_tool_leaf.cert = cert_tool_root.sign_certificate(cert_tool_leaf.csr)
     assert isinstance(cert_tool_leaf.cert, Certificate)
@@ -324,7 +319,7 @@ def test_ca_signed_server_with_mtls(tmp_path):
         f"ST={cert_tool_leaf.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_leaf.LOCALITY_NAME},"
         f"O={cert_tool_leaf.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
     cert_tool_leaf.save_cert()
     cert_tool_leaf.save_private_key()
@@ -345,7 +340,7 @@ def test_ca_signed_server_with_mtls(tmp_path):
         f"ST={cert_tool_client.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_client.LOCALITY_NAME},"
         f"O={cert_tool_client.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
 
     cert_tool_client.cert = cert_tool_root.sign_certificate(cert_tool_client.csr)
@@ -356,7 +351,7 @@ def test_ca_signed_server_with_mtls(tmp_path):
         f"ST={cert_tool_client.STATE_OR_PROVINCE_NAME},"
         f"L={cert_tool_client.LOCALITY_NAME},"
         f"O={cert_tool_client.ORGANIZATION_NAME},"
-        f"CN={common_name})>"
+        f"CN={prefix}-{common_name})>"
     )
     cert_tool_client.save_cert()
     cert_tool_client.save_private_key()
