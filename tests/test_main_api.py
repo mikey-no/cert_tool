@@ -11,11 +11,11 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from fastapi.testclient import TestClient
 
+# test path fix
+sys.path.append(str(pathlib.Path().cwd() / "app"))
 from app.CertTool import tls_web_server_process
 from app.pydantic_schemas import CSRPydanticModel
 
-# test path fix
-sys.path.append(str(pathlib.Path().cwd() / "app"))
 
 proxies = {
     "http": None,
