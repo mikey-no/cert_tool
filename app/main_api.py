@@ -17,7 +17,7 @@ from app.pydantic_schemas import CSRPydanticModel, CAInfoModel, RootCertInfoMode
 
 __app__ = "root_cert_tool_api"
 __version__ = "0.0.3"
-default_ini_file: pathlib.Path = pathlib.Path().cwd() / r".\settings\settings.ini"
+default_ini_file: pathlib.Path = pathlib.Path().cwd() / r"settings" / "settings.ini"
 
 log = logging.getLogger(__name__)
 
