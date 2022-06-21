@@ -20,7 +20,7 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 
 - Python 3.10 (Windows 10, Ubuntu 20.04)
 - pytests do not run on the Ubuntu OS for a reason(s) I do not understand (error: "... port in use ..." - but not so 
-far as I can tell).
+far as I can tell)... 
 
 # Setup
 
