@@ -24,8 +24,8 @@ from cryptography.x509 import CertificateSigningRequest, Certificate
 from cryptography.x509.oid import NameOID
 from fastapi import FastAPI
 
-sys.path.append(str(pathlib.Path().cwd()))
-import utils
+sys.path.append(str(pathlib.Path().cwd())) #
+from app import utils
 
 log = logging.getLogger(__name__)
 

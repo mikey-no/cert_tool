@@ -19,8 +19,7 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 ## Runs on
 
 - Python 3.10 (Windows 10, Ubuntu 20.04)
-- pytests do not run on the Ubuntu OS for a reason(s) I do not understand (error: "... port in use ..." - but not so 
-far as I can tell)... 
+- in a docker container (note this work is partially complete, for example the root certificate is not held in a docker secret)
 
 # Setup
 
@@ -30,6 +29,12 @@ python -m venv venv
 .\venv\scripts\activate.bat
 pip install -r requirements.txt
 ```
+# Build docker image
+
+1) Initialise the Certificate Authority as below
+2) To build the docker api root cert server first run
+   1) ```run_docker_registry.bash``` build and start the registry server
+   2) ```build_image.bash``` build the docker image of the main_api.py based application
 
 # Test
 
@@ -39,7 +44,13 @@ python -m pytest --capture=no
 ```
 
 - **pytest --capture=no**  - option shows the standard output as the tests run
-- **python -m**            - calling via python will also add the current directory to sys.path (see: [pytest usage](https://www.pytest.org/en/7.1.x/how-to/usage.html#usage)) 
+- **python -m**            - calling via python will also add the current directory to sys.path (see: [pytest usage](https://www.pytest.org/en/7.1.x/how-to/usage.html#usage))
+
+On Ubuntu:
+The pytest do not run on Ubuntu due to: "ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 5001): address already in use"
+the steps taken to allow python a non-privileged user do not work and when you run with sudo your path does not have 
+the venv set up as required. This may be caused by running docker registry locally on my test host.
+
 
 # Run
 
@@ -55,6 +66,13 @@ python .\app\main_root.py --prefix dev --create_root --location certs\dev\root
 
 Assuming your CA is running from a host with this url: 'localhost'
 
+## OR via Docker
+
+Run:
+```commandline
+./run.bash
+```
+
 ```commandline
 python .\app\main_api.py --prefix dev --location certs\dev\root
 ```
@@ -68,7 +86,7 @@ See the API docs: http://localhost/docs
 The ca works on http not https to enable a client to start the communication with no prior root ca installed.
 
 ### settings.ini
-main_api will take a settings.ini file in subdirectory of the current working directory with the prefix and location values.
+main_api will take a cert_tool_api.ini file in subdirectory of the current working directory with the prefix and location values.
 
 ## On the leaf server
 
@@ -81,7 +99,7 @@ The root ca signed cert is downloaded to ```cert\dev\leaf\<leaf fdqn>_cert.pem``
 
 where:
 1) --ca_url is the url of the CA
-2) --san is a optional list of subject alternate names
+2) --san is an optional list of subject alternate names
    1) The CA assumes you want localhost and the socket.fqdn() name from the leaf server adding to the san list by default
 3) prefix of the ca and leaf server must match
 
@@ -101,87 +119,26 @@ Sign the certificate signing request creating a leaf certificate, using the comm
 web api.
 
 ```commandline
-python .\app\main_root.py --prefix dev --sign_csr certs/dev/{socket.getfqdn()}_csr.pem
+python .\app\main_root.py --prefix dev --sign_csr certs/dev/$(hostname)_csr.pem
 ```
 
-## Run just CertTool
-
-This command is show for completeness, it is not used anymore, it was one of the development stages the application 
-passed through.
-
-Just CertTool, without the functionality broken out into separate programmes (as above)
-
-```commandline
-python .\app\CertTool.py
-```
-
-Then open in a web browser: 
-
-- http:      ```https://localhost:5000```
-- tls:       ```https://localhost:5001```
-- mtls:      ```https://localhost:5002```
-
-CertTool would need to be commented differently to run each of the above configurations. The 'recipes' are included 
-in the script (CertTool.py). 
-
-- NB 1: the hostname of the leaf server will be automatically used in the certificate file name
-- NB 2: to prefix must be the same for each of these three commands
-
-The command to run mTLS not implemented in a stand-alone application like has been done with the leaf and root scripts.
-The functionality is within CertTool.py, just not exposed.
-
-## Overview of how it works
-
-1. import
-```python
-from multiprocessing import Process
-```
-- for example TLS Server running with uvicorn, note the certificate and private key are passed in as parameters to the function. 
-  - the private key relates to the certificate and as 'only you' have the private key then the cert must be yours
-```python
-
-def tls_server(cert_file: pathlib.Path, private_key_file: pathlib.Path):
-    host = 'localhost'
-    port = 5001
-    log.info(f'Running TLS server: {host}:{port}')
-    uvicorn.run(app,
-                host=host,
-                port=port,
-                log_level="debug",
-                ssl_keyfile=private_key_file,
-                ssl_certfile=cert_file,
-                )
-```
-2. run the TLS Server process 
-  - yield the new process, pass in the parameters as an enum to the tls_server above
-```python
-
-def tls_web_server_process(cert_path, private_key_path):
-    log.info(f'Starting TLS server process: {cert_path}')
-    p = Process(target=tls_server, args=(cert_path, private_key_path,), daemon=True)
-    p.start()
-    log.info(f'TLS Server process started with cert: {cert_path}')
-    yield p
-    p.kill()  # Cleanup after test
-    log.info('TLS Server process stopped')
-    return
-```
-3. in the test function after the certs are created run the tls web server
-  - then call the returned iterator (from the above yield generator to close the server down when the tests are complete)
-```python
-    web_server_process_handle = tls_web_server_process(cert_tool_leaf.cert_file, cert_tool_leaf.private_key_file)
-    next(web_server_process_handle)  # use next to use the yielded iterator
-    log.info('testing the web server and certs')
-    r = requests.get('https://localhost:5001', verify=cert_tool_root.cert_file, )
-    # assert some tests on r
-    try:
-        next(web_server_process_handle)
-    except StopIteration:
-        pass
-```
-
+This
+```$(hostname)``` in ubuntu bash must give the same text and ```socket.socket.getfqdn()``` in python
 # Other
 
 1) The private key may be encrypted (but has not been fully tested)
 2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/) more
 3) Log settings not fully tested or implemented
+
+## Running on Linux you may get this error
+
+ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 5001): address already in use
+There is a security setting that needs to be changed to enable python to run as a none privileged user and be allowed to
+bind to a port less than 1024. Use ```allow_low_port.bash```. The local docker registry started and stopped with ```run_docker_registry.bash```
+and ```stop_docker_registry.bash```. Need to swap the ports used around to not cause this conflict.
+
+I tried iptables but found this simpler to explain.
+I did not try authbind.
+
+use the ```allow_low_port.bash``` script to create copy of the python executable that is called python_enabled that has
+the permission to connect to port 80 etc with a non privileged user.

@@ -17,7 +17,7 @@ from app.pydantic_schemas import CSRPydanticModel, CAInfoModel, RootCertInfoMode
 
 __app__ = "root_cert_tool_api"
 __version__ = "0.0.3"
-default_ini_file: pathlib.Path = pathlib.Path().cwd() / r"settings" / "settings.ini"
+default_ini_file: pathlib.Path = pathlib.Path().cwd() / r"settings" / "cert_tool_api.ini"
 
 log = logging.getLogger(__name__)
 
@@ -48,15 +48,21 @@ def get_ini(setting: str, ini_file: pathlib.Path = default_ini_file) -> str | No
     if ini_file.exists() is False:
         log.info(f"Ini settings file not found: {ini_file}")
     else:
-        log.info(f"Ini settings file used: {ini_file} - {setting}")
-
-    config = configparser.ConfigParser()
-    config.read(ini_file)
-    if setting in config["default"]:
-        return config["default"][setting]
-    else:
-        log.error(f"Setting file does not contain the setting requested: {setting}")
-        return None
+        # log.info(f"Ini settings file used: {ini_file} - {setting}")
+        pass
+    try:
+        config = configparser.ConfigParser()
+        config.read(ini_file)
+        if setting in config["default"]:
+            value=config["default"][setting]
+            log.info(f"Ini settings file used: {ini_file} - {setting} - section: default - value: {value} ")
+            return value
+        else:
+            log.error(f"Setting file does not contain the setting requested: {setting}")
+            return None
+    except Exception as e:
+        log.critical('ini file problem: {e}')
+        sys.exit(-1)
 
 
 @utils.benchmark
@@ -87,6 +93,16 @@ def parse_args() -> argparse:
     )
 
     parser.add_argument(
+        "-pp",
+        "--port",
+        dest="port",
+        default=80,
+        type=int,
+        help="port to run this web app on, defaults to port 80, the default port 80 will not work on ubuntu without "
+             "setting additional permissions on python executable",
+    )
+
+    parser.add_argument(
         "-ll",
         "--log-level",
         choices=["debug", "info"],
@@ -114,9 +130,9 @@ async def root(root_ca_common_name=Depends(depends_root_ca_common_name)):
 
 @app.get("/config", response_model=CAInfoModel)
 async def config(
-    prefix=Depends(depends_prefix),
-    root_ca_common_name=Depends(depends_root_ca_common_name),
-    location=Depends(depends_location),
+        prefix=Depends(depends_prefix),
+        root_ca_common_name=Depends(depends_root_ca_common_name),
+        location=Depends(depends_location),
 ):
     """
     Get the root ca configuration settings: prefix - location of the Root CA certs and keys etc
@@ -131,9 +147,9 @@ async def config(
 
 @app.get("/root_cert", response_class=FileResponse)
 def get_root_cert(
-    prefix=Depends(depends_prefix),
-    location=Depends(depends_location),
-    root_ca_common_name=Depends(depends_root_ca_common_name),
+        prefix=Depends(depends_prefix),
+        location=Depends(depends_location),
+        root_ca_common_name=Depends(depends_root_ca_common_name),
 ):
     """
     The root cert for this CA, in a pem file, see the '/root_ca/info' for cert details
@@ -162,9 +178,9 @@ def get_root_cert(
 
 @app.get("/root_cert/info", response_model=RootCertInfoModel)
 def get_root_cert_info(
-    prefix=Depends(depends_prefix),
-    location=Depends(depends_location),
-    root_ca_common_name=Depends(depends_root_ca_common_name),
+        prefix=Depends(depends_prefix),
+        location=Depends(depends_location),
+        root_ca_common_name=Depends(depends_root_ca_common_name),
 ):
     """
     Get the root ca cert settings, expiry etc.
@@ -194,10 +210,10 @@ def get_root_cert_info(
 
 @app.post("/sign_csr", response_class=FileResponse)
 def post_sign_csr(
-    csr: CSRPydanticModel,
-    prefix=Depends(depends_prefix),
-    location=Depends(depends_location),
-    root_ca_common_name=Depends(depends_root_ca_common_name),
+        csr: CSRPydanticModel,
+        prefix=Depends(depends_prefix),
+        location=Depends(depends_location),
+        root_ca_common_name=Depends(depends_root_ca_common_name),
 ):
     """
     Take a csr in a pem string json format (provided by the main_leaf.py client programme)
@@ -257,8 +273,13 @@ def post_sign_csr(
         return {"root-certs not ready to make a csr": csr.common_name}
 
 
+@app.get('/health')
+def health():
+    return "Healthy: OK"
+
+
 @utils.counter
-def server(host: str = "localhost", port: int = 80):
+def server(host: str = "0.0.0.0", port: int = 80):
     log.info(f"Running server: {host}:{port}")
     uvicorn.run(
         app,
@@ -277,6 +298,18 @@ def main():
     if args.version:
         log.info(f"Application: {__app__} - Version: {__version__}")
         sys.exit(0)
+
+    port = get_ini("port")
+    if port is None:
+        if args.port is None:
+            log.info("No port found, using the default")
+            sys.exit(-1)
+        else:
+            port = args.port
+
+    if isinstance(port, str) and port is not None:
+        log.debug(f'convert {port} to int its is {type(port)}')
+        port = int(port)
 
     prefix = get_ini("prefix")
     if prefix is None:
@@ -299,7 +332,7 @@ def main():
         f"Location: {_location.absolute()} - exists {_location.absolute().exists()}"
     )
 
-    server()
+    server(port=port, host='0.0.0.0')
 
 
 if __name__ == "__main__":
