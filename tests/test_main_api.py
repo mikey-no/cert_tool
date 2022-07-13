@@ -121,6 +121,13 @@ def test_read_root_cert_info(client):
         "value=<BasicConstraints(ca=True, "
         "path_length=0)>)>])>"
     )
+    assert (
+        result_cert_info["root_cert_extensions"]
+        == "<Extensions([<Extension(oid=<ObjectIdentifier(oid=2.5.29.19, "
+        "name=basicConstraints)>, critical=True, "
+        "value=<BasicConstraints(ca=True, "
+        "path_length=0)>)>])>"
+    )
     datetime_format = "%Y-%m-%d %H:%M:%S"
     assert datetime.strptime(
         result_cert_info["root_cert_not_valid_before"], datetime_format
