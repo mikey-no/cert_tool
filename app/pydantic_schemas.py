@@ -13,6 +13,7 @@ class CSRPydanticModel(BaseModel):
 
 class RootCertInfoModel(BaseModel):
     root_cert_subject: str
+    root_cert_issuer: str
     root_cert_not_valid_before: str
     root_cert_not_valid_after: str
     root_cert_serial_number: str

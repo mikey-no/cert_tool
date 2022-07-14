@@ -196,6 +196,7 @@ def get_root_cert_info(
         log.info(cert_tool.cert.subject)
         return RootCertInfoModel(
             root_cert_subject=str(cert_tool.cert.subject),
+            root_cert_issuer=str(cert_tool.cert.issuer),
             root_cert_not_valid_before=str(cert_tool.cert.not_valid_before),
             root_cert_not_valid_after=str(cert_tool.cert.not_valid_after),
             root_cert_serial_number=str(cert_tool.cert.serial_number),
