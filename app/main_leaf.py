@@ -13,7 +13,7 @@ from CertTool import CertTool
 from pydantic_schemas import CSRPydanticModel
 
 __app__ = "leaf_cert_tool"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def send_csr_to_ca_url(
     try:
         response = requests.get(url)
     except Exception as e:
-        log.error(f"Unable to contact the ca: {e}")
+        log.error(f"Unable to contact the ca: {e} - {ca_url}")
         sys.exit(0)
     if response.status_code == 200:
         log.info(f"URL found: {response.status_code}")
@@ -184,8 +184,8 @@ def parse_args() -> argparse:
         dest="san",
         nargs="*",
         type=str,
-        help="list of zero of more subject alternate names, some like localhost are added "
-        "automatically, must be used with --sign_csr",
+        help="list of zero of more subject alternate names, some like localhost are added"
+        "automatically, must be used with --sign_csr argument",
     )
 
     parser.add_argument(
@@ -193,7 +193,7 @@ def parse_args() -> argparse:
         "--log-level",
         choices=["debug", "info"],
         type=str,
-        help="log detail, debug all, info less (default id debug)",
+        help="log detail, debug all, info less (default is debug)",
     )
 
     parser.add_argument(
