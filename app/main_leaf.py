@@ -174,15 +174,6 @@ def parse_args() -> argparse:
         help="URL of the root CA",
     )
 
-    # TODO: to fully implement this function
-    parser.add_argument(
-        "-g",
-        "--get-root-cert",
-        dest="ca_url",
-        type=str,
-        help="From the Root CA URL get the Public Root Certificate",
-    )
-
     parser.add_argument(
         "-pwd", "--password", type=str, help="leaf cert private key password"
     )
