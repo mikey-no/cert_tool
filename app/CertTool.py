@@ -24,7 +24,7 @@ from cryptography.x509 import CertificateSigningRequest, Certificate
 from cryptography.x509.oid import NameOID
 from fastapi import FastAPI
 
-sys.path.append(str(pathlib.Path().cwd())) #
+sys.path.append(str(pathlib.Path().cwd()))  #
 from app import utils
 
 log = logging.getLogger(__name__)
@@ -315,12 +315,20 @@ class CertTool:
             data_pem = x509.load_pem_x509_csr(data)
             if isinstance(data_pem, x509.CertificateSigningRequest):
                 self.csr = data_pem
-                log.info(
-                    f"CSR is loaded, signature is valid: {self.csr.is_signature_valid}"
-                )
+                if self.csr.is_signature_valid:
+                    log.info(
+                        f"CSR is loaded, signature is valid: {self.csr.is_signature_valid}"
+                    )
+                    # moved here, so it does not need to be called manually
+                    self.load_common_name_from_csr()
+                else:
+                    log.error(
+                        f"CSR is loaded, signature is NOT valid: {self.csr.is_signature_valid}"
+                    )
             else:
                 log.error(f"CSR loaded from file is not valid: {self.csr_file}")
                 return None
+
         return self.csr
 
     def _get_subject_(self):
@@ -526,12 +534,13 @@ class CertTool:
         self,
         csr: x509.CertificateSigningRequest,
         subject_alternate_name: List[str] | None = None,
-    ):
+    ) -> x509.Certificate:
         """
         Authority signs the csr from the leaf with their private key issuing the certificate
         path_len=0 means this cert can only sign itself, not other certs,
         path_len=None, here
         see: https://github.com/python-trio/trustme/blob/master/trustme/__init__.py?#L392
+        return the signed leaf cert
         """
         subject = self._get_subject_()
         # for full list of oid see:
@@ -774,7 +783,7 @@ async def read_main():
 
 def tls_server(cert_file: pathlib.Path, private_key_file: pathlib.Path):
     host = "localhost"
-    port = 5001
+    port = 5011
     log.info(f"Running TLS server: {host}:{port}")
     uvicorn.run(
         app,
@@ -790,7 +799,7 @@ def mtls_server(
     cert_file: pathlib.Path, private_key_file: pathlib.Path, ca_cert_file: pathlib.Path
 ):
     host = "localhost"
-    port = 5002
+    port = 5012
     log.info(f"Running MTLS server: {host}:{port}")
     uvicorn.run(
         app,
@@ -879,7 +888,7 @@ def ca_certs_tls_recipe() -> None:
     )
     next(web_server_process_handle)  # use next to use the yielded iterator
 
-    url = "https://localhost:5001"
+    url = "https://localhost:5011"
     log.info(f"testing the web server and certs: open url: {url}")
     log.info(f".. import ca cert into your web browser as trusted: {cert_location}")
 
@@ -948,7 +957,7 @@ def ca_certs_tls_recipe_private_key_encryption() -> None:
     )
     next(web_server_process_handle)  # use next to use the yielded iterator
 
-    url = "https://localhost:5001"
+    url = "https://localhost:5011"
     log.info(f"testing the web server and certs: open url: {url}")
     log.info(f".. import ca cert into your web browser as trusted: {cert_location}")
 
@@ -1018,7 +1027,7 @@ def ca_certs_mtls_recipe() -> None:
         cert_tool_root.cert_file,
     )
     next(web_server_process_handle)  # use next to use the yielded iterator
-    url = "https://localhost:5002"
+    url = "https://localhost:5012"
     log.info(
         f"testing the web server and certs, with mutual TLS client cert: open {url}"
     )

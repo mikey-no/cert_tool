@@ -65,15 +65,22 @@ def client() -> Generator[TestClient, Any, None]:
     app.dependency_overrides[depends_location] = depends_test_location
     with TestClient(app) as client:
         yield client
+
+    def recursive_delete(f: pathlib):
+        if f.is_file():
+            f.unlink()
+        else:
+            try:
+                for child in f.iterdir():
+                    recursive_delete(child)
+                f.rmdir()
+            except Exception as e:
+                log.warning(f"problem deleting temporary test file or directory: {f}")
+                pass
+
     # clean up after the test
-    for item in depends_test_location().rglob("*"):
-        # logging.debug(f'tmp item: {item}')
-        if item.is_file():
-            item.unlink(missing_ok=True)
-        if item.is_dir():
-            item.rmdir()
-    if depends_test_location().exists():
-        depends_test_location().rmdir()
+    recursive_delete(depends_test_location())
+    # remove the overrides
     app.dependency_overrides = {}
 
 
@@ -134,7 +141,25 @@ def test_read_root_cert_info(client):
     assert int(result_cert_info["root_cert_serial_number"]) > 1
 
 
-def test_main_api_post_csr(client, tmp_path):
+def download_file(
+    client, url: str, local_filename: pathlib.Path | None
+) -> pathlib.Path:
+    if local_filename is None:
+        # use the given filename not the name from the last bit of url
+        local_filename = url.split("/")[-1]
+
+    # NOTE the stream=True parameter below
+    with client.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(local_filename, "wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                # If you have chunk encoded response uncomment if and set chunk_size parameter to None.
+                # if chunk:
+                f.write(chunk)
+    return pathlib.Path(local_filename)
+
+
+def test_main_api_post_csr(client):
     # prefix = "test"
     # root_ca_common_name = "test root ca"
     san_list = [
@@ -225,7 +250,7 @@ def test_main_api_post_csr(client, tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs")
     r = requests.get(
-        "https://localhost:5001",
+        "https://localhost:5011",
         verify=root_ca.cert_file,
         proxies=proxies,
     )
@@ -235,3 +260,39 @@ def test_main_api_post_csr(client, tmp_path):
         next(web_server_process_handle)
     except StopIteration:
         pass
+
+    # get the root cert from main_api via http request, no re-use the cert in the test directory
+    # think this is being overwritten somewhere with the client cert meaning it is not the root cert needed
+    # not recognised by the web browser when loaded
+
+    # get the root cert
+    downloaded_root_cert_file: pathlib.Path = (
+        depends_test_location() / "downloaded_root_cert.pem"
+    )
+    downloaded_root_cert_bytes: bytes = b""
+    download_file(client, "/root_cert", downloaded_root_cert_file)
+    with open(downloaded_root_cert_file, "rb") as f:
+        downloaded_root_cert_bytes = f.read()
+    log.info(f"have test root cert file: {downloaded_root_cert_bytes}")
+    assert len(downloaded_root_cert_bytes) > 20
+
+    data_pem = x509.load_pem_x509_certificate(downloaded_root_cert_bytes)
+    if isinstance(data_pem, x509.Certificate):
+        downloaded_root_cert = data_pem
+    else:
+        log.error(f"cert file not valid cert: {type(data)}")
+        assert False
+
+    # the initial root cert does this match the downloaded root cert
+    assert downloaded_root_cert == root_ca.cert
+
+    log.info(downloaded_root_cert.subject)
+
+    # ref_common_name from main_api.py
+    ref_common_name = (
+        f",CN={depends_test_prefix()}"
+        f'-{depends_test_root_ca_common_name().replace(" ", "_").replace(".", "-")}'
+    )
+    assert ref_common_name in str(
+        downloaded_root_cert.subject
+    )  # where is the download_root_cert from?

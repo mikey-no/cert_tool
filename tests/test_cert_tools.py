@@ -34,7 +34,7 @@ async def read_main():
 
 def tls_server(cert_file: pathlib.Path, private_key_file: pathlib.Path):
     host = "localhost"
-    port = 5001
+    port = 5011
     log.info(f"Running TLS server: {host}:{port}")
     uvicorn.run(
         app,
@@ -50,7 +50,7 @@ def mtls_server(
     cert_file: pathlib.Path, private_key_file: pathlib.Path, ca_cert_file: pathlib.Path
 ):
     host = "localhost"
-    port = 5002
+    port = 5012
     log.info(f"Running MTLS server: {host}:{port}")
     uvicorn.run(
         app,
@@ -128,7 +128,7 @@ def test_self_signed_server(tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs")
     r = requests.get(
-        "https://localhost:5001",
+        "https://localhost:5011",
         verify=cert_tool.cert_file,
     )
     assert r.status_code == 200
@@ -182,7 +182,7 @@ def test_ca_signed_server(tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs")
     r = requests.get(
-        "https://localhost:5001",
+        "https://localhost:5011",
         verify=cert_tool_root.cert_file,
         proxies=proxies,
     )
@@ -253,7 +253,7 @@ def test_ca_signed_server_with_private_key_encryption(tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs")
     r = requests.get(
-        "https://localhost:5001",
+        "https://localhost:5011",
         verify=cert_tool_root.cert_file,
         proxies=proxies,
     )
@@ -367,7 +367,7 @@ def test_ca_signed_server_with_mtls(tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs, with mutual TLS client cert")
     r = requests.get(
-        "https://localhost:5002",
+        "https://localhost:5012",
         verify=cert_tool_root.cert_file,
         # cert - tuple order must match client_cert then client_key
         cert=(cert_tool_client.cert_file, cert_tool_client.private_key_file),
@@ -409,7 +409,7 @@ def test_main_root_and_main_leaf(tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs")
     r = requests.get(
-        "https://localhost:5001",
+        "https://localhost:5011",
         verify=root_ca.cert_file,
         proxies=proxies,
     )
@@ -466,7 +466,7 @@ def test_main_root_and_main_leaf_with_san(tmp_path):
     next(web_server_process_handle)  # use next to use the yielded iterator
     log.info("testing the web server and certs")
     r = requests.get(
-        "https://localhost:5001",
+        "https://localhost:5011",
         verify=root_ca.cert_file,
         proxies=proxies,
     )

@@ -47,7 +47,7 @@ python -m pytest --capture=no
 - **python -m**            - calling via python will also add the current directory to sys.path (see: [pytest usage](https://www.pytest.org/en/7.1.x/how-to/usage.html#usage))
 
 On Ubuntu:
-The pytest do not run on Ubuntu due to: "ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 5001): address already in use"
+The pytest do not run on Ubuntu due to: "ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 5011): address already in use"
 the steps taken to allow python a non-privileged user do not work and when you run with sudo your path does not have 
 the venv set up as required. This may be caused by running docker registry locally on my test host.
 
@@ -132,7 +132,7 @@ This
 
 ## Running on Linux you may get this error
 
-ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 5001): address already in use
+ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 5011): address already in use
 There is a security setting that needs to be changed to enable python to run as a none privileged user and be allowed to
 bind to a port less than 1024. Use ```allow_low_port.bash```. The local docker registry started and stopped with ```run_docker_registry.bash```
 and ```stop_docker_registry.bash```. Need to swap the ports used around to not cause this conflict.
