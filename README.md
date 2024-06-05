@@ -14,13 +14,17 @@ The FastAPI Uvicorn server is run in another process than the clients using [mul
 > You could then use these certificates and keys within a TLS terminating proxy in front of your application without 
 > wondering if the certificates are even working or not. :relieved:
 
-> I would only use this in a lab context. You would have to trust the certificate authority!! 
+> I would only use this in a lab context. You would have to trust the certificate authority!!
+
+An update of python and requirements for creating a leaf csr file has shown locally to be successful (5 Jun 2024)
+The CSR was checked with  certutil .\dev-DESKTOP-ZZZZZZ56_csr.pem
+
 
 ## Runs on
 
-- Python 3.10 (Windows 10, Ubuntu 20.04)
+- Python 3.10 and 3.12.3 (Windows 10, Ubuntu 20.04)
 - pytests do not run on the Ubuntu OS for a reason(s) I do not understand (error: "... port in use ..." - but not so 
-far as I can tell)... 
+far as I can tell)...
 
 # Setup
 
@@ -185,3 +189,4 @@ def tls_web_server_process(cert_path, private_key_path):
 1) The private key may be encrypted (but has not been fully tested)
 2) Not sure why I didn't use the [TestClient functionality in Starlettle](https://www.starlette.io/testclient/) more
 3) Log settings not fully tested or implemented
+4) Requests needs to be retired and replaced with httpx

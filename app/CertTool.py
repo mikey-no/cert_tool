@@ -505,15 +505,14 @@ class CertTool:
             if socket.gethostname() is not None:
                 out_list.append(x509.DNSName(socket.gethostname()))
 
-        if name_list is not None:
-            for name in name_list:
-                try:
-                    out_list.append(x509.DNSName(name))
-                except Exception as e:
-                    log.error(
-                        # TODO: why is this an error when it looks like it worked after?
-                        f"Invalid name, not able to add it as a Subject Alternate Name: {e} - {name}"
-                    )
+        # if name_list is not None:
+        #     for name in name_list:
+        #         try:
+        #             out_list.append(x509.DNSName(name))
+        #         except Exception as e:
+        #             log.error(
+        #                 f"Invalid name, not able to add it as a Subject Alternate Name: {e} - {name}"
+        #             )
         out_list = list(dict.fromkeys(out_list))  # de-duplicate entries
         if x509.DNSName("None") in out_list:
             out_list.remove(x509.DNSName("None"))
